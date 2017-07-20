@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  2 10:56:46 2017
-This script calculates the dynamic network from trajectory 
+Created on Thu July 20 2017
+This script contacts functions to calculate the dynamic network type contact networks from HIV RT structures 
 @author: ashutosh
 """
 
@@ -18,21 +18,21 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import scale
 
 #import command_args
-def extract_frame(xtc,tpr,ndx,i):
-    print("Trajectory file read: %s" %(xtc))
-    print("Structure file read: %s" %(tpr))
-    print("Index file read: %s" %(ndx))    
-    choice=open('choice.txt','r')                            # File with option to write the frames
-    fr=str(i)                                                #Frame number to be dumped converted to string for use within subprocess
-    fname='frame'+fr+'.pdb'                                  #PDB file in which frame is dumped
-    sout=open(os.devnull,'w')                                #dumping standard output from gromacs
-    if spawn.find_executable("gmx"):
-        subprocess.call(['gmx','trjconv', '-f', xtc, '-s', tpr, '-dump', fr,'-o', fname, '-n', ndx],stdin=choice, stdout=sout,stderr=subprocess.STDOUT)
-    else:
-        subprocess.call(['trjconv', '-f', xtc, '-s', tpr, '-dump', fr,'-o', fname, '-n', ndx],stdin=choice,stderr=subprocess.STDOUT)
-    choice.close()
-    print("Frame %s dumped in file %s" %(fr,fname))
-    return fname
+# def extract_frame(xtc,tpr,ndx,i):
+#     print("Trajectory file read: %s" %(xtc))
+#     print("Structure file read: %s" %(tpr))
+#     print("Index file read: %s" %(ndx))    
+#     choice=open('choice.txt','r')                            # File with option to write the frames
+#     fr=str(i)                                                #Frame number to be dumped converted to string for use within subprocess
+#     fname='frame'+fr+'.pdb'                                  #PDB file in which frame is dumped
+#     sout=open(os.devnull,'w')                                #dumping standard output from gromacs
+#     if spawn.find_executable("gmx"):
+#         subprocess.call(['gmx','trjconv', '-f', xtc, '-s', tpr, '-dump', fr,'-o', fname, '-n', ndx],stdin=choice, stdout=sout,stderr=subprocess.STDOUT)
+#     else:
+#         subprocess.call(['trjconv', '-f', xtc, '-s', tpr, '-dump', fr,'-o', fname, '-n', ndx],stdin=choice,stderr=subprocess.STDOUT)
+#     choice.close()
+#     print("Frame %s dumped in file %s" %(fr,fname))
+#     return fname
 
 def find_contact(fname):
     if os.path.isfile(fname)==True:                                    #checks if the name saved in file_list is a file
@@ -46,14 +46,34 @@ def find_contact(fname):
         res_ids=[]
         chain_seq=[]
         for res in model.get_residues():
-            if PDB.is_aa(res):
+            if PDB.is_aa(res,standard=True):    ### considers only the 20 standard aa not modified ones
                 res_ids.append(res.get_id()[1])
                 chain_seq.append(res.get_parent().get_id())
                 resnum=resnum+1
+            else:
+                pass
         for i in range(0,len(res_ids)):
-            for j in range(0,len(res_ids)):
+            #if temp_struct[0][chain_seq[i]][res_ids[i]]['CA']:
+            if temp_struct[0][chain_seq[i]][res_ids[i]]['CA'].is_disordered():
                 atom1=temp_struct[0][chain_seq[i]][res_ids[i]]['CA']
-                atom2=temp_struct[0][chain_seq[j]][res_ids[j]]['CA']
+                atom1.set_altloc(' ')
+            else:
+                atom1=temp_struct[0][chain_seq[i]][res_ids[i]]['CA']
+            #else:
+             #   pass
+            for j in range(0,len(res_ids)):
+                #print(res_ids[j])
+                #if temp_struct[0][chain_seq[j]][res_ids[j]]['CA']:
+                if temp_struct[0][chain_seq[j]][res_ids[j]]['CA'].is_disordered():
+                    atom2=temp_struct[0][chain_seq[j]][res_ids[j]]['CA']
+                    atom2.set_altloc(' ')
+                else:
+                    atom2=temp_struct[0][chain_seq[j]][res_ids[j]]['CA']
+                
+#                atom2=temp_struct[0][chain_seq[j]][res_ids[j]]['CA']
+#                 else:
+#                     pass
+
                 if (atom1-atom2 <= 7) and (abs(int(res_ids[i])-res_ids[j])>2):
                     contact=(res_ids[i],chain_seq[i],res_ids[j],chain_seq[j])
                     contact_rev=(res_ids[j],chain_seq[j],res_ids[i],chain_seq[i])
@@ -64,7 +84,7 @@ def find_contact(fname):
                         contacts.append(contact)
                         contact_count=contact_count+1
                 else:
-                    pass 
+                    pass
     return contacts 
                 
             
